@@ -1,0 +1,96 @@
+/*
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package io.trino.filesystem.alluxio;
+
+import com.google.common.collect.ImmutableMap;
+import io.airlift.units.DataSize;
+import io.airlift.units.Duration;
+import org.junit.jupiter.api.Test;
+
+import java.util.Map;
+
+import static io.airlift.configuration.testing.ConfigAssertions.assertFullMapping;
+import static io.airlift.configuration.testing.ConfigAssertions.assertRecordedDefaults;
+import static io.airlift.configuration.testing.ConfigAssertions.recordDefaults;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+class TestAlluxioFileSystemCacheConfig
+{
+    @Test
+    public void testInvalidConfiguration()
+    {
+        assertThatThrownBy(() ->
+                AlluxioFileSystemCacheModule.getAlluxioConfiguration(
+                        new AlluxioFileSystemCacheConfig()
+                                .setCacheDirectories("/cache1,/cache2")
+                                .setMaxCacheDiskUsagePercentages("0")
+                                .setMaxCacheSizes("1B")))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Either fs.cache.max-sizes or fs.cache.max-disk-usage-percentages must be specified");
+        assertThatThrownBy(() ->
+                AlluxioFileSystemCacheModule.getAlluxioConfiguration(
+                        new AlluxioFileSystemCacheConfig()
+                                .setCacheDirectories("/cache1,/cache2")
+                                .setMaxCacheSizes("1B")))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("fs.cache.directories and fs.cache.max-sizes must have the same size");
+        assertThatThrownBy(() ->
+                AlluxioFileSystemCacheModule.getAlluxioConfiguration(
+                        new AlluxioFileSystemCacheConfig()
+                                .setCacheDirectories("/cache1,/cache2")
+                                .setMaxCacheDiskUsagePercentages("0")))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("fs.cache.directories and fs.cache.max-disk-usage-percentages must have the same size");
+        assertThatThrownBy(() -> new AlluxioFileSystemCacheConfig()
+                .setMaxCacheDiskUsagePercentages("1.1")
+                .getMaxCacheDiskUsagePercentages())
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("must be between 0 and 1");
+    }
+
+    @Test
+    void testDefaults()
+    {
+        assertRecordedDefaults(recordDefaults(AlluxioFileSystemCacheConfig.class)
+                .setCacheDirectories(null)
+                .setCachePageSize(DataSize.valueOf("1MB"))
+                .setMaxCacheSizes(null)
+                .setMaxCacheDiskUsagePercentages(null)
+                .setCacheTTL(Duration.valueOf("7d"))
+                .setShadowCacheEnabled(false));
+    }
+
+    @Test
+    public void testExplicitPropertyMappings()
+    {
+        Map<String, String> properties = ImmutableMap.<String, String>builder()
+                .put("fs.cache.directories", "/tmp")
+                .put("fs.cache.alluxio.page-size", "7MB")
+                .put("fs.cache.max-sizes", "1GB")
+                .put("fs.cache.max-disk-usage-percentages", "0.5")
+                .put("fs.cache.ttl", "1d")
+                .put("fs.cache.alluxio.shadow-cache", "true")
+                .buildOrThrow();
+
+        AlluxioFileSystemCacheConfig expected = new AlluxioFileSystemCacheConfig()
+                .setCacheDirectories("/tmp")
+                .setCachePageSize(DataSize.valueOf("7MB"))
+                .setMaxCacheSizes("1GB")
+                .setMaxCacheDiskUsagePercentages("0.5")
+                .setCacheTTL(Duration.valueOf("1d"))
+                .setShadowCacheEnabled(true);
+
+        assertFullMapping(properties, expected);
+    }
+}

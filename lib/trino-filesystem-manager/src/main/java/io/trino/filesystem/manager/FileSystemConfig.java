@@ -21,6 +21,7 @@ public class FileSystemConfig
     private boolean nativeAzureEnabled;
     private boolean nativeS3Enabled;
     private boolean nativeGcsEnabled;
+    private String cacheType;
 
     public boolean isHadoopEnabled()
     {
@@ -67,6 +68,18 @@ public class FileSystemConfig
     public FileSystemConfig setNativeGcsEnabled(boolean nativeGcsEnabled)
     {
         this.nativeGcsEnabled = nativeGcsEnabled;
+        return this;
+    }
+
+    public String getCacheType()
+    {
+        return cacheType;
+    }
+
+    @Config("fs.cache")
+    public FileSystemConfig setCacheType(String cacheType)
+    {
+        this.cacheType = cacheType;
         return this;
     }
 }

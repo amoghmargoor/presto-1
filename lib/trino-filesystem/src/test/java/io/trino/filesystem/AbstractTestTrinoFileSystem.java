@@ -83,6 +83,11 @@ public abstract class AbstractTestTrinoFileSystem
         return true;
     }
 
+    protected boolean isFileContentCaching()
+    {
+        return false;
+    }
+
     protected Location createLocation(String path)
     {
         if (path.isEmpty()) {
@@ -511,8 +516,11 @@ public abstract class AbstractTestTrinoFileSystem
                 outputStream.write("overwrite".getBytes(UTF_8));
             }
 
-            // verify file is different
-            assertThat(tempBlob.read()).isEqualTo("overwrite");
+            // Caching file systems rely on last modified time in epoch, which can be flaky
+            if (!isFileContentCaching()) {
+                // verify file is different
+                assertThat(tempBlob.read()).isEqualTo("overwrite");
+            }
         }
     }
 
@@ -926,7 +934,12 @@ public abstract class AbstractTestTrinoFileSystem
             }
             try (TrinoInputStream inputStream = inputFile.newStream()) {
                 byte[] bytes = ByteStreams.toByteArray(inputStream);
-                assertThat(bytes).isEqualTo(newContents);
+                if (!isFileContentCaching()) {
+                    assertThat(bytes).isEqualTo(newContents);
+                }
+                else {
+                    assertThat(bytes).isEqualTo(("test blob content for " + location).getBytes(UTF_8));
+                }
             }
 
             // Verify deleting
