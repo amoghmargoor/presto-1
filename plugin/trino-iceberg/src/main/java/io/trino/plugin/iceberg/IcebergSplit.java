@@ -14,11 +14,13 @@
 package io.trino.plugin.iceberg;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects.ToStringHelper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.trino.plugin.iceberg.delete.DeleteFile;
+import io.trino.spi.HostAddress;
 import io.trino.spi.SplitWeight;
 import io.trino.spi.connector.ConnectorSplit;
 
@@ -44,6 +46,7 @@ public class IcebergSplit
     private final String partitionDataJson;
     private final List<DeleteFile> deletes;
     private final SplitWeight splitWeight;
+    private final List<HostAddress> addresses;
 
     @JsonCreator
     public IcebergSplit(
@@ -58,6 +61,33 @@ public class IcebergSplit
             @JsonProperty("deletes") List<DeleteFile> deletes,
             @JsonProperty("splitWeight") SplitWeight splitWeight)
     {
+        this(
+                path,
+                start,
+                length,
+                fileSize,
+                fileRecordCount,
+                fileFormat,
+                partitionSpecJson,
+                partitionDataJson,
+                deletes,
+                splitWeight,
+                ImmutableList.of());
+    }
+
+    public IcebergSplit(
+            String path,
+            long start,
+            long length,
+            long fileSize,
+            long fileRecordCount,
+            IcebergFileFormat fileFormat,
+            String partitionSpecJson,
+            String partitionDataJson,
+            List<DeleteFile> deletes,
+            SplitWeight splitWeight,
+            List<HostAddress> addresses) {
+
         this.path = requireNonNull(path, "path is null");
         this.start = start;
         this.length = length;
@@ -68,6 +98,19 @@ public class IcebergSplit
         this.partitionDataJson = requireNonNull(partitionDataJson, "partitionDataJson is null");
         this.deletes = ImmutableList.copyOf(requireNonNull(deletes, "deletes is null"));
         this.splitWeight = requireNonNull(splitWeight, "splitWeight is null");
+        this.addresses = requireNonNull(addresses, "addresses is null");
+    }
+
+    @Override
+    public boolean isRemotelyAccessible() {
+        return true;
+    }
+
+    @JsonIgnore
+    @Override
+    public List<HostAddress> getAddresses()
+    {
+        return addresses;
     }
 
     @JsonProperty
