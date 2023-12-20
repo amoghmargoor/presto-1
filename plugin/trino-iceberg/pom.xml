@@ -600,6 +600,10 @@
             <version>3.44.0.0</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>io.trino</groupId>
+            <artifactId>trino-filesystem-cache-alluxio</artifactId>
+        </dependency>
     </dependencies>
 
     <build>
